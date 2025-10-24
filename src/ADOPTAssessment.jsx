@@ -317,7 +317,6 @@ const ADOPTAssessment = () => {
   const calculateScores = () => {
     const pillarScores = {};
     let totalScore = 0;
-    let totalQuestions = 0;
 
     pillars.forEach(pillar => {
       let pillarTotal = 0;
@@ -331,21 +330,30 @@ const ADOPTAssessment = () => {
       });
 
       if (pillarCount > 0) {
-        pillarScores[pillar.id] = pillarTotal / pillarCount;
-        totalScore += pillarTotal;
-        totalQuestions += pillarCount;
+        const pillarAverage = pillarTotal / pillarCount;
+        pillarScores[pillar.id] = pillarAverage;
+        totalScore += pillarAverage;
       }
     });
 
-    const overallScore = totalQuestions > 0 ? totalScore / totalQuestions : 0;
+    // Total score is now out of 25 (5 pillars × 5 points each)
+    const overallScore = totalScore;
 
     return { pillarScores, overallScore };
   };
 
-  const getReadinessLevel = (score) => {
-    if (score >= 4) return { level: 'Transformational', desc: 'High Readiness', color: 'text-green-600' };
-    if (score >= 3) return { level: 'Developing', desc: 'Moderate Readiness', color: 'text-blue-600' };
-    if (score >= 2) return { level: 'Emerging', desc: 'Low Readiness', color: 'text-yellow-600' };
+  const getReadinessLevel = (score, isPillar = false) => {
+    // For pillar scores (out of 5)
+    if (isPillar) {
+      if (score >= 4) return { level: 'Transformational', desc: 'High Readiness', color: 'text-green-600' };
+      if (score >= 3) return { level: 'Developing', desc: 'Moderate Readiness', color: 'text-blue-600' };
+      if (score >= 2) return { level: 'Emerging', desc: 'Low Readiness', color: 'text-yellow-600' };
+      return { level: 'Nascent', desc: 'Very Low Readiness', color: 'text-red-600' };
+    }
+    // For overall score (out of 25)
+    if (score >= 20) return { level: 'Transformational', desc: 'High Readiness', color: 'text-green-600' };
+    if (score >= 15) return { level: 'Developing', desc: 'Moderate Readiness', color: 'text-blue-600' };
+    if (score >= 10) return { level: 'Emerging', desc: 'Low Readiness', color: 'text-yellow-600' };
     return { level: 'Nascent', desc: 'Very Low Readiness', color: 'text-red-600' };
   };
 
@@ -567,7 +575,7 @@ const ADOPTAssessment = () => {
     pdf.setFontSize(36);
     pdf.setTextColor(37, 99, 235);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(overallScore.toFixed(2), pageWidth / 2, yPosition + 27, { align: 'center' });
+    pdf.text(`${overallScore.toFixed(1)} / 25`, pageWidth / 2, yPosition + 27, { align: 'center' });
 
     pdf.setFontSize(12);
     const readinessColor = overallReadiness.color === 'text-green-600' ? [22, 163, 74] :
@@ -713,7 +721,7 @@ const ADOPTAssessment = () => {
 
     pillars.forEach(pillar => {
       const score = pillarScores[pillar.id] || 0;
-      const readiness = getReadinessLevel(score);
+      const readiness = getReadinessLevel(score, true);
       const percentage = (score / 5) * 100;
 
       checkAddPage(35);
@@ -745,7 +753,7 @@ const ADOPTAssessment = () => {
       pdf.setFontSize(13);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(31, 41, 55);
-      pdf.text(score.toFixed(2), pageWidth - 25, yPosition + 8, { align: 'right' });
+      pdf.text(`${score.toFixed(1)} / 5`, pageWidth - 35, yPosition + 8, { align: 'right' });
 
       // Progress bar
       pdf.setFillColor(229, 231, 235);
@@ -848,10 +856,10 @@ const ADOPTAssessment = () => {
     yPosition += 12;
 
     const interpretations = [
-      { range: '4.0 - 5.0', level: 'Transformational', desc: 'High Readiness', detail: 'Your organization demonstrates mature AI capabilities with systematic processes and enterprise-wide adoption.', color: [22, 163, 74] },
-      { range: '3.0 - 3.9', level: 'Developing', desc: 'Moderate Readiness', detail: 'Structured approaches exist with clear progress toward comprehensive AI integration across the organization.', color: [37, 99, 235] },
-      { range: '2.0 - 2.9', level: 'Emerging', desc: 'Low Readiness', detail: 'Initial AI initiatives are underway but adoption remains inconsistent and requires strategic focus.', color: [202, 138, 4] },
-      { range: '1.0 - 1.9', level: 'Nascent', desc: 'Very Low Readiness', detail: 'Limited AI maturity with exploratory efforts requiring foundational development.', color: [220, 38, 38] }
+      { range: '20 - 25', level: 'Transformational', desc: 'High Readiness', detail: 'Your organization demonstrates mature AI capabilities with systematic processes and enterprise-wide adoption.', color: [22, 163, 74] },
+      { range: '15 - 19', level: 'Developing', desc: 'Moderate Readiness', detail: 'Structured approaches exist with clear progress toward comprehensive AI integration across the organization.', color: [37, 99, 235] },
+      { range: '10 - 14', level: 'Emerging', desc: 'Low Readiness', detail: 'Initial AI initiatives are underway but adoption remains inconsistent and requires strategic focus.', color: [202, 138, 4] },
+      { range: '5 - 9', level: 'Nascent', desc: 'Very Low Readiness', detail: 'Limited AI maturity with exploratory efforts requiring foundational development.', color: [220, 38, 38] }
     ];
 
     interpretations.forEach(item => {
@@ -1120,7 +1128,7 @@ const ADOPTAssessment = () => {
           <CardContent className="p-8 space-y-8">
             <div className="text-center p-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
               <h3 className="text-xl font-semibold mb-3 text-gray-700">Overall ADOPT Score</h3>
-              <div className="text-6xl font-bold mb-3 text-blue-600">{overallScore.toFixed(2)}</div>
+              <div className="text-6xl font-bold mb-3 text-blue-600">{overallScore.toFixed(1)} / 25</div>
               <div className={`text-2xl font-semibold ${overallReadiness.color}`}>
                 {overallReadiness.level} — {overallReadiness.desc}
               </div>
@@ -1135,7 +1143,7 @@ const ADOPTAssessment = () => {
               <h3 className="text-2xl font-semibold text-gray-800">Detailed Pillar Breakdown</h3>
               {pillars.map(pillar => {
                 const score = pillarScores[pillar.id] || 0;
-                const readiness = getReadinessLevel(score);
+                const readiness = getReadinessLevel(score, true);
                 const percentage = (score / 5) * 100;
 
                 return (
@@ -1144,7 +1152,7 @@ const ADOPTAssessment = () => {
                       <span className="font-bold text-lg">
                         {pillar.id}: {pillar.title}
                       </span>
-                      <span className="text-lg font-bold">{score.toFixed(2)}</span>
+                      <span className="text-lg font-bold">{score.toFixed(1)} / 5</span>
                     </div>
                     <div className="text-sm text-gray-600 mb-2">{pillar.subtitle}</div>
                     <div className="w-full bg-gray-200 rounded-full h-4">
